@@ -10,17 +10,16 @@ st.title("Dashboard Penyewaan Sepeda")
 # Load data
 @st.cache_data  # Biar gak reload terus-terusan
 def baca_data():
-    path = "D:\\DBS_coding\\Bike_dashboard\\all_data.csv"  # Pastikan path benar
+    path = "https://raw.githubusercontent.com/SailaJuliaa/Proyek_analisisData/refs/heads/main/Dashboard/all_data%20(1).csv"
     df = pd.read_csv(path)
     df['dteday'] = pd.to_datetime(df['dteday'])
     df['tahun'] = df['dteday'].dt.year
     df['bulan'] = df['dteday'].dt.month
     return df
 
-# Ambil data
 data_sepeda = baca_data()
 
-# Sidebar untuk pilih tahun dan bulan
+# untuk pilih tahun dan bulan
 st.sidebar.header("Filter Data")
 tahun_pilihan = st.sidebar.selectbox("Pilih Tahun:", [2011, 2012], index=0)
 bulan_pilihan = st.sidebar.selectbox("Pilih Bulan:", range(1, 13), format_func=lambda x: f"Bulan {x}")
