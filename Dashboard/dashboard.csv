@@ -3,72 +3,53 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 
+# Setting dasar untuk dashboard
 st.set_page_config(page_title="Dashboard Penyewaan Sepeda", layout="wide")
 st.title("Dashboard Penyewaan Sepeda")
 
-# ambil dataset utama dan ubah format tanggal
+# Load data
+@st.cache_data  # Biar gak reload terus-terusan
 def baca_data():
-    df = pd.read_csv("D:\\DBS_coding\\Bike_dashboard\\all_data.csv")  
-    df['dteday'] = pd.to_datetime(df['dteday']) 
+    path = "D:\\DBS_coding\\Bike_dashboard\\all_data.csv"  # Pastikan path benar
+    df = pd.read_csv(path)
+    df['dteday'] = pd.to_datetime(df['dteday'])
+    df['tahun'] = df['dteday'].dt.year
+    df['bulan'] = df['dteday'].dt.month
     return df
 
+# Ambil data
 data_sepeda = baca_data()
 
-st.sidebar.header("Pilih Tanggal")
-tgl_pilihan = st.sidebar.date_input("Pilih tanggal:", data_sepeda['dteday'].min())
-data_harian = data_sepeda.query("dteday == @tgl_pilihan")
+# Sidebar untuk pilih tahun dan bulan
+st.sidebar.header("Filter Data")
+tahun_pilihan = st.sidebar.selectbox("Pilih Tahun:", [2011, 2012], index=0)
+bulan_pilihan = st.sidebar.selectbox("Pilih Bulan:", range(1, 13), format_func=lambda x: f"Bulan {x}")
 
-st.subheader(f"Data Penyewaan - {tgl_pilihan}")
-if not data_harian.empty:
-    col1, col2 = st.columns(2)
-    
-    # Total sewa hari itu
-    total_sewa = data_harian['cnt'].values[0]
-    col1.metric("Total Sewa", total_sewa)
+# Filter data berdasarkan tahun dan bulan
+data_bulanan = data_sepeda[(data_sepeda['tahun'] == tahun_pilihan) & (data_sepeda['bulan'] == bulan_pilihan)]
 
-    # info cuaca
-    kondisi_cuaca = {1: "Cerah", 2: "Berkabut", 3: "Hujan Ringan", 4: "Hujan Lebat"}
-    cuaca = kondisi_cuaca.get(data_harian['weathersit'].values[0], "Tidak Diketahui")
-    
-    suhu = round(data_harian['temp'].values[0] * 41, 1)  
-    kelembaban = round(data_harian['hum'].values[0] * 100, 1)  
-    angin = round(data_harian['windspeed'].values[0] * 67, 1)  
+total_peminjaman = data_bulanan['cnt'].sum()
+st.subheader(f"Total Peminjaman Sepeda di {tahun_pilihan} Bulan {bulan_pilihan}: {total_peminjaman}")
 
-    col2.metric("Kondisi Cuaca", cuaca)
-    st.info(f"Suhu: {suhu}°C | Kelembaban: {kelembaban}% | Angin: {angin} km/jam")
+# Grafik peminjaman bulanan
+st.subheader("Tren Penyewaan Sepeda per Bulan (2011-2012)")
+data_perbulan = data_sepeda.groupby(['tahun', 'bulan'])['cnt'].sum().reset_index()
+fig, ax = plt.subplots(figsize=(10, 5))
+sns.lineplot(data=data_perbulan, x='bulan', y='cnt', hue='tahun', marker='o', ax=ax)
+plt.xlabel("Bulan")
+plt.ylabel("Total Penyewaan")
+plt.xticks(range(1, 13))
+plt.legend(title="Tahun")
+st.pyplot(fig)
 
-    st.subheader("Penyewaan Harian")
-    fig, ax = plt.subplots(figsize=(8, 4))
-    sns.barplot(x=["Casual", "Registered", "Total"], y=[
-        data_harian['casual'].values[0],
-        data_harian['registered'].values[0],
-        total_sewa
-    ], palette="coolwarm", ax=ax)
-    ax.set_ylabel("Jumlah Penyewaan")
-    st.pyplot(fig)
-
-    st.subheader("Tren Penyewaan Sepeda")
-    fig, ax = plt.subplots(figsize=(10, 5))
-    sns.lineplot(data=data_sepeda, x='dteday', y='cnt', marker='o', label="Total Rentals", ax=ax)
-    plt.axvline(pd.to_datetime(tgl_pilihan), color='r', linestyle='--', label="Tanggal Dipilih")
-    plt.xticks(rotation=45)
-    plt.xlabel("Tanggal")
-    plt.ylabel("Total Penyewaan")
-    plt.legend()
-    st.pyplot(fig)
-
-else:
-    st.warning("Data tidak ditemukan untuk tanggal ini. Silakan pilih tanggal lain.")
-
-st.subheader("Hari dengan Penyewaan Terbanyak & Tersedikit")
-
-hari_max = data_sepeda.sort_values(by='cnt', ascending=False).iloc[0]
-hari_min = data_sepeda.sort_values(by='cnt').iloc[0]
+# Cari bulan dengan penyewaan tertinggi & terendah
+st.subheader("Bulan dengan Penyewaan Terbanyak & Tersedikit")
+bulan_max = data_perbulan.loc[data_perbulan['cnt'].idxmax()]
+bulan_min = data_perbulan.loc[data_perbulan['cnt'].idxmin()]
 
 col1, col2 = st.columns(2)
-
-col1.metric("Penyewaan Tertinggi", f"{hari_max['cnt']} sepeda", f"Pada {hari_max['dteday'].date()}")
-col2.metric("Penyewaan Terendah", f"{hari_min['cnt']} sepeda", f"Pada {hari_min['dteday'].date()}")
+col1.metric("Penyewaan Tertinggi", f"{bulan_max['cnt']} sepeda", f"Pada Tahun {bulan_max['tahun']} Bulan {bulan_max['bulan']}")
+col2.metric("Penyewaan Terendah", f"{bulan_min['cnt']} sepeda", f"Pada Tahun {bulan_min['tahun']} Bulan {bulan_min['bulan']}")
 
 if __name__ == "__main__":
-    st.success("Dashboard Penyewaan Sepeda ")
+    st.success("Dashboard Penyewaan Sepeda Siap Digunakan!")
