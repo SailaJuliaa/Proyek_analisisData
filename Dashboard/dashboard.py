@@ -3,11 +3,11 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-df = pd.read_csv('D:\\DBS_coding\\penyewaan_sepeda\\all_data (1).csv')
+df = pd.read_csv("https://raw.githubusercontent.com/SailaJuliaa/Proyek_analisisData/refs/heads/main/Dashboard/all_data%20(1).csv")
 
-df['yr'] = df['yr'].astype(int)
-df['mnth'] = df['mnth'].astype(int)
-df['date'] = df[['yr', 'mnth']].astype(str).agg('-'.join, axis=1)
+df['yr'] = df["yr"].astype(int)
+df['mnth'] = df["mnth"].astype(int)
+df['date'] = df[["yr", "mnth"]].astype(str).agg('-'.join, axis=1)
 
 df['dteday'] = pd.to_datetime(df['dteday']) 
 
