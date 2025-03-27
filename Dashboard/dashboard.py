@@ -1,65 +1,77 @@
 import streamlit as st
 import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
+import plotly.express as px
 
-df = pd.read_csv("https://raw.githubusercontent.com/SailaJuliaa/Proyek_analisisData/refs/heads/main/Dashboard/all_data%20(1).csv")
+#memuat dataset
+@st.cache_data
+def muat_data():
+    lokasi_file = "D:\\DBS_coding\\penyewaan_sepeda\\all_data (2).csv"
+    data = pd.read_csv(lokasi_file, parse_dates=["dteday"])
+    
+    # Menambahkan fitur waktu yang relevan
+    data['tahun'] = data['dteday'].dt.year
+    data['bulan'] = data['dteday'].dt.month
+    data['minggu'] = data['dteday'].dt.isocalendar().week
+    
+    return data
 
-df['yr'] = df["yr"].astype(int)
-df['mnth'] = df["mnth"].astype(int)
-df['date'] = df[["yr", "mnth"]].astype(str).agg('-'.join, axis=1)
+def utama():
+    st.set_page_config(page_title="Dashboard Penyewaan Sepeda", layout="wide")
+    
+    st.title("Dashboard penyewaan sepeda(2011-2012)")
+    data = muat_data()
+    
+    # Filter di sidebar
+    st.sidebar.header("Filter Dashboard")
+    
+    with st.sidebar.expander("Opsi Filter", expanded=True):
+        # Pilihan tahun
+        pilihan_tahun = ['Semua Tahun'] + sorted(data["tahun"].unique().tolist())
+        tahun_terpilih = st.selectbox("Pilih Tahun", options=pilihan_tahun, index=0)
+        
+        # Pilihan minggu
+        pilihan_minggu = ['Semua Minggu'] + sorted(data["minggu"].unique().tolist())
+        minggu_terpilih = st.selectbox("Pilih Minggu", options=pilihan_minggu, index=0)
+    
+    # Menerapkan filter tahun
+    if tahun_terpilih != 'Semua Tahun':
+        data = data[data["tahun"] == tahun_terpilih]
+    
+    # Menerapkan filter minggu
+    if minggu_terpilih != 'Semua Minggu':
+        data = data[data["minggu"] == minggu_terpilih]
+    
+    # Tampilan metrik utama
+    kol1, kol2, kol3 = st.columns(3)
+    with kol1:
+        st.metric("Total Penyewaan", f"{data['cnt'].sum():,}")
+    with kol2:
+        st.metric("Rata-rata Penyewaan Harian", f"{data['cnt'].mean():.2f}")
+    with kol3:
+        st.metric("Maksimum Penyewaan dalam Sehari", f"{data['cnt'].max():,}")
+    
+    # Grafik
+    kol4, kol5 = st.columns(2)
+    
+    with kol4:
+        st.subheader("Total Penyewaan per Bulan (2011-2012)")
+        penyewaan_bulanan = data.groupby(["tahun", "bulan"])['cnt'].sum().reset_index()
+        penyewaan_bulanan['bulan_tahun'] = penyewaan_bulanan['tahun'].astype(str) + '-' + penyewaan_bulanan['bulan'].astype(str)
+        
+        grafik1 = px.bar(penyewaan_bulanan, x="bulan_tahun", y="cnt", color="tahun", 
+                         title="Total Penyewaan per Bulan", labels={'cnt': 'Total Penyewaan'})
+        st.plotly_chart(grafik1, use_container_width=True)
+    
+    with kol5:
+        st.subheader("Total Penyewaan per Minggu")
+        penyewaan_mingguan = data.groupby("minggu")["cnt"].sum().reset_index()
+        
+        grafik2 = px.bar(penyewaan_mingguan, x="minggu", y="cnt", title="Total Penyewaan per Minggu")
+        st.plotly_chart(grafik2, use_container_width=True)
+    
+    # Menampilkan data mentah
+    st.subheader("Data Mentah")
+    st.dataframe(data)
 
-df['dteday'] = pd.to_datetime(df['dteday']) 
-
-# Sidebar
-st.sidebar.header("Filter Data")
-year_options = ["Semua Tahun"] + sorted(df['yr'].unique().tolist())
-selected_year = st.sidebar.selectbox("Pilih Tahun:", year_options)
-
-month_options = ["Semua Bulan"] + list(range(1, 13))
-selected_month = st.sidebar.selectbox("Pilih Bulan:", month_options)
-
-# Filter Data
-filtered_df = df.copy()
-if selected_year != "Semua Tahun":
-    filtered_df = filtered_df[filtered_df['yr'] == selected_year]
-if selected_month != "Semua Bulan":
-    filtered_df = filtered_df[filtered_df['mnth'] == selected_month]
-
-st.title("Dashboard Bike by saila Julia ")
-
-# Tren Peminjaman Sepeda
-total_per_day = filtered_df.groupby('dteday')['cnt'].sum().reset_index()
-st.subheader("Tren Peminjaman Sepeda (2011-2012)")
-fig, ax = plt.subplots(figsize=(15, 6))
-sns.lineplot(data=total_per_day, x='dteday', y='cnt', marker='o', ax=ax, color='blue', label="Total Rentals")
-ax.set_title("Total Peminjaman Sepeda dari 2011 hingga 2012", fontsize=15)
-ax.set_xlabel("Tanggal")
-ax.set_ylabel("Jumlah Peminjaman")
-plt.xticks(rotation=45)
-st.pyplot(fig)
-
-# Peminjaman per Bulan
-total_per_month = df.groupby(['mnth'])['cnt'].sum().reset_index()
-
-total_per_month = total_per_month.sort_values(by=['mnth'])
-month_labels = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"]
-
-st.subheader("Peminjaman Sepeda per Bulan")
-fig, ax = plt.subplots(figsize=(12, 6))
-sns.barplot(data=total_per_month, x='mnth', y='cnt', palette='flare', ax=ax, errorbar=None)
-ax.set_title("Total Peminjaman Sepeda per Bulan", fontsize=15)
-ax.set_xlabel("Bulan")
-ax.set_ylabel("Jumlah Peminjaman")
-ax.set_xticklabels(month_labels)  
-st.pyplot(fig)
-
-# Informasi Bulan dengan Peminjaman Tertinggi dan Terendah
-if selected_month != "Semua Bulan":
-    max_rentals = filtered_df['cnt'].max()
-    min_rentals = filtered_df['cnt'].min()
-    st.subheader(f"Statistik Bulan {selected_month}")
-    st.write(f"Jumlah penyewaan sepeda tertinggi bulan ini: {max_rentals}")
-    st.write(f"Jumlah penyewaan sepeda terendah bulan ini: {min_rentals}")
-
-st.info("Data dapat berubah sesuai bulan dan tahun.")
+if __name__ == "__main__":
+    utama()
