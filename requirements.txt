@@ -3,4 +3,4 @@ NumPy==2.2.3
 Pandas==2.2.3
 Seaborn==0.13.2
 Streamlit==1.43.2
-plotly==25.0.1
+plotly==6.0.1
