@@ -5,7 +5,7 @@ import plotly.express as px
 #memuat dataset
 @st.cache_data
 def muat_data():
-    lokasi_file = "D:\\DBS_coding\\penyewaan_sepeda\\all_data (2).csv"
+    lokasi_file = "https://raw.githubusercontent.com/SailaJuliaa/Proyek_analisisData/refs/heads/main/Dashboard/all_data%20(2).csv"
     data = pd.read_csv(lokasi_file, parse_dates=["dteday"])
     
     # Menambahkan fitur waktu yang relevan
